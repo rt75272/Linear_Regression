@@ -1,2 +1,2 @@
-# Linear_Regression
-y=mx+b
+# Linear Regression 
+___y = mx + b___
