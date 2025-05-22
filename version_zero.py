@@ -21,30 +21,54 @@ def load_data(filepath="example_data.csv"):
     return dataset
 
 class LinearRegression:
-    """Linear Regression class/object to work with multiple features."""
-    def __init__(self):
-        """Constructor for the LinearRegression class."""
-        self.coef_ = None  # Coefficients (weights).
-        self.intercept_ = None  # Intercept (bias).
+    """Linear Regression supporting multiple features."""
+    def __init__(self, fit_intercept=True):
+        self.fit_intercept = fit_intercept
+        self.coef_ = None
+        self.intercept_ = None
 
     def fit(self, X, y):
         """Fits the linear regression model to data using the normal equation."""
-        # Add a column of ones to X for the intercept term
-        X_b = np.hstack([np.ones((X.shape[0], 1)), X]) # X_b is the design matrix.
-        # Normal equation: theta = (X^T * X)^(-1) * X^T * y.
-        X_b_T = X_b.T # X_b_T is the transpose of X_b.
-        X_b_T_X_b = X_b_T @ X_b # X_b_T_X_b is the dot product of X_b_T and X_b.
-        X_b_T_X_b_inv = np.linalg.pinv(X_b_T_X_b)# X_b_T_X_b_inv is the pseudo-inverse.
-        X_b_T_y = X_b_T @ y # X_b_T_y is the dot product of X_b_T and y.
-        theta = X_b_T_X_b_inv @ X_b_T_y # The theta is the vector of coefficients.
-        self.intercept_ = theta[0] # The intercept is the first element of theta. 
-        self.coef_ = theta[1:] # And the rest are the coefficients.
+        X = np.asarray(X)
+        y = np.asarray(y)
+        # Input validation.
+        if np.any(np.isnan(X)) or np.any(np.isnan(y)):
+            raise ValueError("Input contains NaN values.")
+        if np.any(np.isinf(X)) or np.any(np.isinf(y)):
+            raise ValueError("Input contains infinite values.")
+        if X.ndim != 2:
+            raise ValueError("X must be a 2D array.")
+        if y.ndim != 1:
+            raise ValueError("y must be a 1D array.")
+        if X.shape[0] != y.shape[0]:
+            raise ValueError("Number of samples in X and y do not match.")
+        # Add intercept if needed.
+        if self.fit_intercept:
+            X_b = np.hstack([np.ones((X.shape[0], 1)), X])
+        else:
+            X_b = X
+        # Check for singularity.
+        cond_number = np.linalg.cond(X_b.T @ X_b)
+        if cond_number > 1e12:
+            print("Warning: Design matrix is close to singular. Results may not be reliable.")
+        # Normal equation.
+        theta = np.linalg.pinv(X_b.T @ X_b) @ X_b.T @ y
+        if self.fit_intercept:
+            self.intercept_ = theta[0]
+            self.coef_ = theta[1:]
+        else:
+            self.intercept_ = 0.0
+            self.coef_ = theta
 
     def predict(self, X):
-        """Generates and returnsd a prediction using the linear regression model."""
-        y_pred = X @ self.coef_ # y_pred is the dot product of X and the coefficients.
-        y_pred = y_pred + self.intercept_ # Add the intercept to the predictions.
-        return y_pred 
+        """Predicts using the linear regression model."""
+        X = np.asarray(X)
+        if X.ndim == 1:
+            X = X.reshape(1, -1)
+        if self.fit_intercept:
+            return X @ self.coef_ + self.intercept_
+        else:
+            return X @ self.coef_
 
 def main():
     """Main driver function to run the linear regression model."""
@@ -60,7 +84,7 @@ def main():
     # Split into train and test sets.
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.3, random_state=42)
-    model = LinearRegression() # Initialize the linear regression model.
+    model = LinearRegression(fit_intercept=True) # Init the linear regression model.
     model.fit(X_train, y_train) # Train the linear regression model.
     y_pred = model.predict(X_test) # Predict on test set.
     # Evaluate the model and display the results.
