@@ -6,7 +6,8 @@ from sklearn.linear_model import LinearRegression
 # ------------------------------------------------------------------------------------- 
 # Gaussian Function.
 #
-# Demonstrates how to use Gaussian features for regression tasks.
+# Demonstrates how to use Gaussian features for regression tasks. From the book Python 
+# Data Science Handbook, Essential Tools for Working with Data by Jake VanderPlas.
 #
 # Usage:
 #   python gaussian.py
@@ -45,7 +46,7 @@ def generate_data(seed=0, n_points=100):
     """Generate noisy sine wave data."""
     np.random.seed(seed)
     x = np.linspace(0, 10, n_points)
-    y = np.sin(x) + 0.1 * np.random.randn(n_points) # Sine wave with noise.
+    y = np.sin(x) + 0.25 * np.random.randn(n_points) # Sine wave with noise.
     return x, y
 
 def fit_gaussian_model(x, y, n_features=20):
