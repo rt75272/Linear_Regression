@@ -42,7 +42,7 @@ def print_data_info(data):
     print(f"Number of STA files loaded: {len(data)}")
     if data:
         print(f"First file size (chars): {len(data[0])}")
-        print(f"Preview of first file:\n{data[0][:1000]}") # Print first 1000 chars.
+        print(f"Preview of first file:\n{data[0][:1000]}") # Prints first 1000 chars.
     print("---------------------------")
 
 def main():
@@ -54,5 +54,6 @@ def main():
     print_loaded_files(sta_files, n)
     print_data_info(data)
 
+# The big red activation button.
 if __name__ == "__main__":
     main()

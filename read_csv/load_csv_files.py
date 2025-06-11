@@ -3,6 +3,7 @@ import glob
 import pandas as pd
 from tqdm import tqdm
 import concurrent.futures
+import psutil
 # ------------------------------------------------------------------------------------- 
 # CSV Loader.
 #
@@ -17,12 +18,20 @@ def find_csv_files(directory):
     csv_files = glob.glob(pattern, recursive=True)
     return csv_files
 
+def get_max_workers():
+    """Determine max_workers based on available RAM (1 worker per 1GB, at least 1)."""
+    total_gb = int(psutil.virtual_memory().total / (1024 ** 3))
+    print(f"Total RAM: {total_gb} GB Available")
+    max_workers = max(1, total_gb)
+    return max_workers
+
 def load_csv_files(csv_files, n):
     """Load all CSV files into DataFrames with a progress bar and multithreading."""
+    max_workers = get_max_workers()
     dataframes = []
-    with concurrent.futures.ThreadPoolExecutor() as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = executor.map(pd.read_csv, csv_files)
-        results = list(tqdm(futures, total=n, desc="Loading CSV files"))
+        results = list(tqdm(futures, total=n, desc=f"Loading CSV files ({max_workers} workers)"))
         dataframes.extend(results)
     return dataframes
 

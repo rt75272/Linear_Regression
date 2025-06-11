@@ -1,2 +1,10 @@
 pandas
 tqdm
+psutil
+numpy
+scikit-learn
+scipy
+matplotlib
+seaborn
+scikit-image
+scikit-learn
