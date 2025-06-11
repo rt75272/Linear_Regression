@@ -36,13 +36,23 @@ def print_loaded_files(sta_files, n):
         print(f"Loaded: {file}")
     print(f"Total files loaded: {n}")
 
+def print_data_info(data):
+    """Print important information about the loaded STA data."""
+    print("\n--- STA Data Information ---")
+    print(f"Number of STA files loaded: {len(data)}")
+    if data:
+        print(f"First file size (chars): {len(data[0])}")
+        print(f"Preview of first file:\n{data[0][:1000]}") # Print first 1000 chars.
+    print("---------------------------")
+
 def main():
     """Main driver function."""
     sta_directory = 'sta_files'
     sta_files = find_sta_files(sta_directory)
     n = len(sta_files)
-    data = load_sta_files(sta_files)
+    data = load_sta_files(sta_files, n)
     print_loaded_files(sta_files, n)
+    print_data_info(data)
 
 if __name__ == "__main__":
     main()

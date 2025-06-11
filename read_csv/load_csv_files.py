@@ -32,6 +32,16 @@ def print_loaded_files(csv_files, n):
         print(f"Loaded: {file}")
     print(f"Total files loaded: {n}")
 
+def print_data_info(dataframes):
+    """Print important information about the loaded CSV data."""
+    print("\n--- CSV Data Information ---")
+    print(f"Number of CSV files loaded: {len(dataframes)}")
+    if dataframes:
+        print(f"First DataFrame shape: {dataframes[0].shape}")
+        print(f"First DataFrame columns: {list(dataframes[0].columns)}")
+        print(f"Preview of first DataFrame:\n{dataframes[0].head()}")
+    print("----------------------------")
+
 def main():
     """Main driver function."""
     csv_directory = 'csv_files'
@@ -39,6 +49,7 @@ def main():
     n = len(csv_files)
     dataframes = load_csv_files(csv_files, n)
     print_loaded_files(csv_files, n)
+    print_data_info(dataframes)
 
 # Big red activation button.
 if __name__ == "__main__":
