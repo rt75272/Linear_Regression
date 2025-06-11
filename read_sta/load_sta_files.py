@@ -1,6 +1,7 @@
 import os
 import glob
 from tqdm import tqdm
+import concurrent.futures
 # ------------------------------------------------------------------------------------- 
 # STA Loader.
 #
@@ -15,17 +16,22 @@ def find_sta_files(directory):
     sta_files = glob.glob(pattern, recursive=True)
     return sta_files
 
-def load_sta_files(sta_files):
-    """Load all STA files into a list of strings with a progress bar."""
+def read_sta_file(file):
+    """Helper function to read a single STA file."""
+    with open(file, 'r') as f:
+        return f.read()
+
+def load_sta_files(sta_files, n):
+    """Load all STA files into a list with a progress bar and multithreading."""
     data = []
-    for file in tqdm(sta_files, desc="Loading STA files"):
-        with open(file, 'r') as f:
-            data.append(f.read())
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = executor.map(read_sta_file, sta_files)
+        results = list(tqdm(futures, total=n, desc="Loading STA files"))
+        data.extend(results)
     return data
 
-def print_loaded_files(sta_files):
+def print_loaded_files(sta_files, n):
     """Print the list of loaded STA files."""
-    n = len(sta_files)
     for file in sta_files:
         print(f"Loaded: {file}")
     print(f"Total files loaded: {n}")
@@ -34,8 +40,9 @@ def main():
     """Main driver function."""
     sta_directory = 'sta_files'
     sta_files = find_sta_files(sta_directory)
+    n = len(sta_files)
     data = load_sta_files(sta_files)
-    print_loaded_files(sta_files)
+    print_loaded_files(sta_files, n)
 
 if __name__ == "__main__":
     main()
