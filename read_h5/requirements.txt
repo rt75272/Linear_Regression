@@ -5,3 +5,6 @@ torch
 matplotlib
 tqdm
 psutil
+scikit-learn
+scipy
+torchvision

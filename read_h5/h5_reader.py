@@ -1,13 +1,13 @@
 import os
 import h5py
 import torch # type: ignore
-import torch.nn as nn # type: ignore
-import torch.optim as optim # type: ignore
-from torch.utils.data import Dataset, DataLoader # type: ignore
-import numpy as np
-import matplotlib.pyplot as plt
-import concurrent.futures
 import psutil
+import numpy as np
+import torch.nn as nn # type: ignore
+import concurrent.futures
+import torch.optim as optim # type: ignore
+import matplotlib.pyplot as plt
+from torch.utils.data import Dataset, DataLoader # type: ignore
 from tqdm import tqdm
 # ------------------------------------------------------------------------------------- 
 # UNet h5 Reader.
@@ -36,6 +36,7 @@ class UNet(nn.Module):
         self.dec4 = self.conv_block(32 + 16, 16)
         self.final = nn.Conv2d(16, out_channels, kernel_size=1)
         self.sigmoid = nn.Sigmoid()
+
     def conv_block(self, in_channels, out_channels):
         """Helper function to create a block of two convolutional layers with 
         ReLU activation."""
@@ -44,6 +45,7 @@ class UNet(nn.Module):
             nn.ReLU(inplace=True),
             nn.Conv2d(out_channels, out_channels, 3, padding=1),
             nn.ReLU(inplace=True))
+    
     def forward(self, x):
         """Forward pass of the U-Net."""
         c1 = self.enc1(x)
@@ -66,8 +68,10 @@ class H5Dataset(Dataset):
         """Constructor function for H5Dataset."""
         self.X = torch.from_numpy(X).permute(0, 3, 1, 2)
         self.Y = torch.from_numpy(Y).permute(0, 3, 1, 2)
+    
     def __len__(self):
         return self.X.shape[0]
+    
     def __getitem__(self, idx):
         return self.X[idx], self.Y[idx]
 
@@ -77,7 +81,7 @@ def get_dataset(f, key, filepath):
     if isinstance(f[key], h5py.Dataset):
         return f[key][:]
     elif isinstance(f[key], h5py.Group):
-        # If it's a group, return the first dataset found in the group
+        # If it's a group, return the first dataset found in the group.
         for subkey in f[key].keys():
             if isinstance(f[key][subkey], h5py.Dataset):
                 return f[key][subkey][:]
@@ -90,7 +94,7 @@ def load_h5_data(filepath):
     with h5py.File(filepath, 'r') as f:
         X = get_dataset(f, 'images', filepath)
         Y = get_dataset(f, 'masks', filepath)
-    # Ensure data has a channel dimension
+    # Ensure data has a channel dimension.
     if X.ndim == 3:
         X = X[..., np.newaxis]
     if Y.ndim == 3:
@@ -112,8 +116,7 @@ def train_on_file(filepath,
         model.train()
         epoch_losses = []
         num_epochs = 5
-        # Progress bar for epochs (hidden in main progress bar).
-        for epoch in tqdm(range(num_epochs), desc=f"Training {os.path.basename(filepath)}", leave=False):
+        for epoch in range(num_epochs):
             epoch_loss = 0
             for X_batch, Y_batch in dataloader:
                 X_batch, Y_batch = X_batch.to(device), Y_batch.to(device)
@@ -152,22 +155,19 @@ def train_on_file(filepath,
             "error": str(e)}
 
 def process_all_h5(directory='imorphics-cartilage', ram_per_worker_gb=2):
-    """Batch Processing. Processes all .h5 files in the given directory using 
-    multiprocessing. Returns a list of results for each file."""
+    """Processes all .h5 files using multithreading, limiting workers by CPU and RAM."""
     h5_files = [
         os.path.join(directory, file)
         for file in os.listdir(directory)
         if file.endswith('.h5')]
     if not h5_files:
         return []
-    # Determine resources for parallel processing.
-    available_gb = psutil.virtual_memory().available / (1024 ** 3)
-    cpu_cores = os.cpu_count() or 1
+    available_gb = psutil.virtual_memory().available / (1024 ** 3) / 2
+    cpu_cores = os.cpu_count() / 2 or 1
     max_workers_ram = max(1, int(available_gb // ram_per_worker_gb))
-    max_workers = 1  # Set to 1 for stability, increase for parallelism if resources allow.
+    max_workers = min(cpu_cores, max_workers_ram)  # Limit by both CPU and RAM.
     results = []
-    # Progress bar for all files.
-    with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {executor.submit(train_on_file, file): file for file in h5_files}
         for future in tqdm(concurrent.futures.as_completed(futures), 
                         total=len(h5_files), desc="Overall Progress"):
@@ -183,21 +183,22 @@ def read_h5_to_tensor(file_path, dataset_name):
     return tensor
 
 def display_h5_contents(filepath):
-    """Prints the structure and contents of an HDF5 file, including groups and datasets."""
+    """Prints the structure and contents of an HDF5 file, including groups 
+    and datasets."""
     with h5py.File(filepath, 'r') as f:
         print(f"Contents of {filepath}:")
         for key in f.keys():
-            print(f"  {key}: {type(f[key])}")
+            print(f"\t{key}: {type(f[key])}")
             if isinstance(f[key], h5py.Group):
-                print(f"    Subkeys: {list(f[key].keys())}")
+                print(f"\tSubkeys: {list(f[key].keys())}")
                 for subkey in f[key].keys():
                     item = f[key][subkey]
                     if isinstance(item, h5py.Dataset):
-                        print(f"      {subkey}: Dataset, shape={item.shape}, dtype={item.dtype}")
+                        print(f"\t{subkey}: Dataset, shape={item.shape}, dtype={item.dtype}")
                     elif isinstance(item, h5py.Group):
-                        print(f"      {subkey}: Group")
+                        print(f"\t{subkey}: Group")
             elif isinstance(f[key], h5py.Dataset):
-                print(f"    Dataset, shape={f[key].shape}, dtype={f[key].dtype}")
+                print(f"\tDataset, shape={f[key].shape}, dtype={f[key].dtype}")
 
 def main():
     """Main driver function. Trains models on all .h5 files and prints summary statistics."""
@@ -210,7 +211,7 @@ def main():
             print(f"{res['file']}: ERROR - {res['error']}")
         else:
             print(f"{res['file']}: Final Train Loss={res['final_train_loss']:.4f}, "
-                  f"Test Loss={res['test_loss']:.4f}, Test Accuracy={res['test_accuracy']:.4f}")
+                f"Test Loss={res['test_loss']:.4f}, Test Accuracy={res['test_accuracy']:.4f}")
 
 # The big red activation button.
 if __name__ == "__main__":
